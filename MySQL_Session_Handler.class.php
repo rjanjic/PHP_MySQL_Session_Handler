@@ -101,8 +101,6 @@ class MySQL_Session_Handler {
 			// Connect to DB
 			$this->db->connect();
 		}
-		// Create table if not exists
-		$this->createStorageTable();
 		
 		// If not setted value from php.ini is used
 		$this->lifeTime = ($lifeTime === 0) ? ini_get('session.gc_maxlifetime') : $lifeTime;
@@ -131,7 +129,7 @@ class MySQL_Session_Handler {
 	 * @param void
 	 */	
 	function createStorageTable() {
-		$this->db->query("CREATE TABLE IF NOT EXISTS `{$this->table}` ( `session_id` varchar(50) NOT NULL, `name` varchar(50) NOT NULL, `expires` int(10) unsigned NOT NULL DEFAULT '0', `data` text, `fingerprint` varchar(32) NOT NULL, PRIMARY KEY (`session_id`, `name`) ) ENGINE=InnoDB;");
+		return $this->db->query("CREATE TABLE IF NOT EXISTS `{$this->table}` ( `session_id` varchar(50) NOT NULL, `name` varchar(50) NOT NULL, `expires` int(10) unsigned NOT NULL DEFAULT '0', `data` text, `fingerprint` varchar(32) NOT NULL, PRIMARY KEY (`session_id`, `name`) ) ENGINE=InnoDB;");
 	}
 	
 	/** Initialize session
@@ -162,17 +160,31 @@ class MySQL_Session_Handler {
 	 */
 	function _Read($session_id) {
 		// Read entry
-		$this->db->query("SELECT `data` FROM `{$this->table}` WHERE `session_id` = '{$this->db->escape($session_id)}' AND `name` = '{$this->db->escape($this->name)}' AND `fingerprint` LIKE '{$this->fingerprint()}' AND `expires` > " . time() . " ORDER BY `expires` DESC LIMIT 1;");
+		if ($this->db->query("SELECT `data` FROM `{$this->table}` WHERE `session_id` = '{$this->db->escape($session_id)}' AND `name` = '{$this->db->escape($this->name)}' AND `fingerprint` LIKE '{$this->fingerprint()}' AND `expires` > " . time() . " ORDER BY `expires` DESC LIMIT 1;") === FALSE) {
+			if ($this->db->errorNo == 1146) {
+				// Create table if not exists
+				if ($this->createStorageTable())
+					return $this->_Read($session_id);
+			}
+		}
 		// Return data or null
 		return ($this->db->affected > 0 && ($row = $this->db->fetchArray())) ? $this->encrypt ?  $this->decrypt($row['data']) : $row['data'] : NULL;
 	}
 	
 	/** Initialize session
 	 * @param string 	$session_id	- Session identifier
-	 * @param string 	$string 	- Session data
+	 * @param string 	$data 		- Session data
 	 */
 	function _Write($session_id, $data) {
-		return $this->db->arrayToInsert($this->table, array('session_id' => $session_id, 'name' => $this->name, 'expires' => time() + $this->lifeTime, 'data' => $this->encrypt ? $this->encrypt($data) : $data, 'fingerprint' => $this->fingerprint()), FALSE, '`expires` = VALUES(`expires`), `data` = VALUES(`data`)');
+		$r = $this->db->arrayToInsert($this->table, array('session_id' => $session_id, 'name' => $this->name, 'expires' => time() + $this->lifeTime, 'data' => $this->encrypt ? $this->encrypt($data) : $data, 'fingerprint' => $this->fingerprint()), FALSE, '`expires` = VALUES(`expires`), `data` = VALUES(`data`)');
+		if ($r === FALSE) {
+			if ($this->db->errorNo == 1146) {
+				// Create table if not exists
+				if ($this->createStorageTable())
+					return $this->_Write($session_id, $data);
+			}
+		}
+		return $r;
 	}
 
 	/** Destroy session
