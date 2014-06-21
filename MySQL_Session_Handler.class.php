@@ -64,7 +64,7 @@ class MySQL_Session_Handler {
 	/** Session name 
 	 * @var string 
 	 */
-	var $name = 'PHP_MYSQL_SESSION';
+	var $name = 'PHPSESSID';
 	
 	/** Session storage table name 
 	 * @var string 
@@ -206,28 +206,28 @@ class MySQL_Session_Handler {
 		$this->db->query("DELETE FROM `{$this->table}` WHERE `expires` < " . time() . ";");
 		return $this->db->affected;
 	}
-	
+
 	/** Encrypt session data
-     * @param 	string 	$data 	- Data to encrypt
-     * @return 	string 	- Encrypted data
-     */
-    function encrypt($data) {
-        return rtrim(base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_256, $this->key, $data, MCRYPT_MODE_ECB, mcrypt_create_iv(mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB), MCRYPT_RAND))), "\0");
-    }
-	
+	 * @param 	string 	$data 	- Data to encrypt
+	 * @return 	string 	- Encrypted data
+	 */
+	function encrypt($data) {
+		return rtrim(base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_256, $this->key, $data, MCRYPT_MODE_ECB, mcrypt_create_iv(mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB), MCRYPT_RAND))), "\0");
+	}
+
 	/** Decrypt session data
-     * @param 	string 	$data 	- Data to decrypt
-     * @return 	string 	- Decrypted data
-     */
-    function decrypt($data) {
-        return rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, $this->key, base64_decode($data), MCRYPT_MODE_ECB, mcrypt_create_iv(mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB), MCRYPT_RAND)), "\0");
-    }
-	
+	 * @param 	string 	$data 	- Data to decrypt
+	 * @return 	string 	- Decrypted data
+	 */
+	function decrypt($data) {
+		return rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, $this->key, base64_decode($data), MCRYPT_MODE_ECB, mcrypt_create_iv(mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB), MCRYPT_RAND)), "\0");
+	}
+
 	/** Returns "digital fingerprint" of user
-     * @param 	void
-     * @return 	string 	- MD5 hashed data
-     */
+	 * @param 	void
+	 * @return 	string 	- MD5 hashed data
+	 */
 	function fingerprint() {
-		return md5(implode('|', array($_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'], $_SERVER['HTTP_ACCEPT'], $_SERVER['HTTP_ACCEPT_ENCODING'], $_SERVER['HTTP_ACCEPT_LANGUAGE'])));
+		return md5(implode('|', array($_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'])));
 	}
 }
