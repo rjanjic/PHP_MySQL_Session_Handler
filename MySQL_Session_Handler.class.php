@@ -33,6 +33,14 @@
  * To use PHP MySQL Session Handler simply call mysql_session_start()
  * function.
  *
+ ** If you are reseaving message like: Call to undefined function mcrypt_encrypt()
+ ** Install:
+ *$ sudo apt-get install php5-mcrypt
+ *$ sudo service apache2 restart
+ ** or enable extension:
+ *$ sudo mv /etc/php5/conf.d/mcrypt.ini /etc/php5/mods-available/
+ *$ sudo php5enmod mcrypt
+ *$ sudo service apache2 restart
  ******************************************************************/
  
 /** MySQL database stored session
@@ -64,7 +72,7 @@ class MySQL_Session_Handler {
 	/** Session name 
 	 * @var string 
 	 */
-	var $name = 'PHPSESSID';
+	var $name = 'PHP_MYSQL_SESSION';
 	
 	/** Session storage table name 
 	 * @var string 
@@ -129,7 +137,7 @@ class MySQL_Session_Handler {
 	 * @param void
 	 */	
 	function createStorageTable() {
-		return $this->db->query("CREATE TABLE IF NOT EXISTS `{$this->table}` ( `session_id` varchar(50) NOT NULL, `name` varchar(50) NOT NULL, `expires` int(10) unsigned NOT NULL DEFAULT '0', `data` text, `fingerprint` varchar(32) NOT NULL, PRIMARY KEY (`session_id`, `name`) ) ENGINE=InnoDB;");
+		return $this->db->query("CREATE TABLE IF NOT EXISTS `{$this->table}` ( `session_id` char(32) NOT NULL, `name` char(32) NOT NULL, `expires` int(10) unsigned NOT NULL DEFAULT '0', `data` text, `fingerprint` char(32) NOT NULL, PRIMARY KEY (`session_id`, `name`), KEY `expires` (`expires`) ) ENGINE=MyISAM DEFAULT CHARSET={$this->db->charset};");
 	}
 	
 	/** Initialize session
